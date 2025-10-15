@@ -1,13 +1,16 @@
 // Transact.tsx
-// Simple payment component: send 1 ALGO or 1 USDC from connected wallet → receiver address.
+// Enhanced ROSCA payment component with group functionality
+// Supports standard payments, ROSCA contributions, and group joining
 // Uses Algokit + wallet connector. Designed for TestNet demos.
-// UI refreshed for a modern Web3 look (SurgePay green–orange–white theme). Logic unchanged.
 
 import { algo, AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
-import { AiOutlineLoading3Quarters, AiOutlineSend } from 'react-icons/ai'
+import { AiOutlineLoading3Quarters, AiOutlineSend, AiOutlineClose } from 'react-icons/ai'
+import { HiUserGroup } from 'react-icons/hi'
+import { BsPeople, BsCurrencyDollar } from 'react-icons/bs'
+import { RiExchangeDollarLine } from 'react-icons/ri'
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 
 interface TransactInterface {
@@ -15,16 +18,26 @@ interface TransactInterface {
   setModalState: (value: boolean) => void
 }
 
+// Transaction types
+type TransactionType = 'standard' | 'rosca-contribution' | 'join-group'
+
+// Mock ROSCA groups for POC
+const roscaGroups = [
+  { id: 1, name: 'Entrepreneur Circle', contribution: 50, joinFee: 10 },
+  { id: 2, name: 'Tech Builders Fund', contribution: 100, joinFee: 20 },
+  { id: 3, name: 'Community Savings', contribution: 25, joinFee: 5 },
+]
+
 const Transact = ({ openModal, setModalState }: TransactInterface) => {
-  const LORA = 'https://lora.algokit.io/testnet';
+  const LORA = 'https://lora.algokit.io/testnet'
 
   // UI state
   const [loading, setLoading] = useState<boolean>(false)
   const [receiverAddress, setReceiverAddress] = useState<string>('')
-  const [assetType, setAssetType] = useState<'ALGO' | 'USDC'>('ALGO') // toggle between ALGO and USDC
-
-  // NEW: Simple success banner state (UI only; tx logic unchanged)
-  const [lastSuccess, setLastSuccess] = useState<{ msg: string; txId?: string } | null>(null)
+  const [assetType, setAssetType] = useState<'ALGO' | 'USDC'>('ALGO')
+  const [transactionType, setTransactionType] = useState<TransactionType>('standard')
+  const [selectedGroup, setSelectedGroup] = useState<number>(1)
+  const [customAmount, setCustomAmount] = useState<string>('1')
 
   // Algorand client setup (TestNet by default from env)
   const algodConfig = getAlgodConfigFromViteEnvironment()
@@ -37,6 +50,18 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
   // USDC constants (TestNet ASA)
   const usdcAssetId = 10458941n
   const usdcDecimals = 6
+
+  // Get amount based on transaction type
+  const getTransactionAmount = () => {
+    if (transactionType === 'join-group') {
+      const group = roscaGroups.find((g) => g.id === selectedGroup)
+      return group?.joinFee || 10
+    } else if (transactionType === 'rosca-contribution') {
+      const group = roscaGroups.find((g) => g.id === selectedGroup)
+      return group?.contribution || 50
+    }
+    return parseFloat(customAmount) || 1
+  }
 
   // ------------------------------
   // Handle sending payment
@@ -51,33 +76,57 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
       return
     }
 
-    try {
-      enqueueSnackbar(`Sending ${assetType} transaction...`, { variant: 'info' })
+    // Guard: receiver address for standard payments
+    if (transactionType === 'standard' && receiverAddress.length !== 58) {
+      enqueueSnackbar('Invalid receiver address', { variant: 'warning' })
+      setLoading(false)
+      return
+    }
 
-      let txResult;
-      let msg;
+    try {
+      const amount = getTransactionAmount()
+      let txTypeLabel = ''
+      let targetAddress = receiverAddress
+
+      // Determine transaction type and target
+      if (transactionType === 'join-group') {
+        txTypeLabel = 'Group Join Fee'
+        // In production, this would be the ROSCA contract address
+        targetAddress = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ' // Example placeholder
+      } else if (transactionType === 'rosca-contribution') {
+        txTypeLabel = 'ROSCA Contribution'
+        // In production, this would be the ROSCA group's pool address
+        targetAddress = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ' // Example placeholder
+      } else {
+        txTypeLabel = 'Payment'
+      }
+
+      enqueueSnackbar(`Sending ${txTypeLabel}...`, { variant: 'info' })
+
+      let txResult
+      let msg
 
       if (assetType === 'ALGO') {
         txResult = await algorand.send.payment({
           signer: transactionSigner,
           sender: activeAddress,
-          receiver: receiverAddress,
-          amount: algo(1),
-        });
-        msg = '✅ 1 ALGO sent!';
+          receiver: targetAddress,
+          amount: algo(amount),
+        })
+        msg = `✅ ${amount} ALGO sent as ${txTypeLabel}!`
       } else {
-        const usdcAmount = 1n * 10n ** BigInt(usdcDecimals);
+        const usdcAmount = BigInt(amount) * 10n ** BigInt(usdcDecimals)
         txResult = await algorand.send.assetTransfer({
           signer: transactionSigner,
           sender: activeAddress,
-          receiver: receiverAddress,
+          receiver: targetAddress,
           assetId: usdcAssetId,
           amount: usdcAmount,
-        });
-        msg = '✅ 1 USDC sent!';
+        })
+        msg = `✅ ${amount} USDC sent as ${txTypeLabel}!`
       }
 
-      const txId = txResult?.txIds?.[0];
+      const txId = txResult?.txIds?.[0]
 
       enqueueSnackbar(`${msg} TxID: ${txId}`, {
         variant: 'success',
@@ -92,88 +141,232 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
               View on Lora ↗
             </a>
           ) : null,
-      });
-
-      // NEW: inline success banner
-      setLastSuccess({ msg, txId })
+      })
 
       // Reset form
       setReceiverAddress('')
+      setCustomAmount('1')
 
-      // (Group transaction example preserved as comment)
+      // -----------------------------------------------------
+      // Group transaction example (covered in Session 6)
+      // This shows payment + asset opt-in + asset transfer
+      // -----------------------------------------------------
+      /*
+      const groupTx = algorand.newGroup()
+
+      groupTx.addPayment({
+        signer: account1!.signer,
+        sender: account1!.addr,
+        receiver: account2!.addr,
+        amount: algo(0.20),
+        staticFee: algo(0.003),
+      })
+
+      groupTx.addAssetOptIn({
+        signer: account2!.signer,
+        sender: account2!.addr,
+        assetId: usdcAssetId, // 10458941n
+        staticFee: algo(0),
+      })
+
+      groupTx.addAssetTransfer({
+        signer: account1!.signer,
+        sender: account1!.addr,
+        assetId: usdcAssetId,
+        amount: BigInt(0.1 * 10 ** usdcDecimals),
+        receiver: account2!.addr,
+        staticFee: algo(0),
+      })
+
+      const txResult = await groupTx.send()
+      */
     } catch (e) {
       console.error(e)
-      enqueueSnackbar(`Failed to send ${assetType}`, { variant: 'error' })
+      enqueueSnackbar(`Failed to send transaction`, { variant: 'error' })
     }
 
     setLoading(false)
   }
 
+  const isFormValid = () => {
+    if (transactionType === 'standard') {
+      return receiverAddress.length === 58 && parseFloat(customAmount) > 0
+    }
+    return true // ROSCA transactions don't need receiver input
+  }
+
   // ------------------------------
-  // Modal UI (redesigned with Tailwind)
+  // Modal UI
   // ------------------------------
   return (
     <dialog
       id="transact_modal"
       className={`modal modal-bottom sm:modal-middle backdrop-blur-sm ${openModal ? 'modal-open' : ''}`}
     >
-      <div className="modal-box bg-neutral-900 text-gray-100 rounded-2xl shadow-2xl border border-white/10 p-0 overflow-hidden">
+      <div className="modal-box bg-gradient-to-br from-slate-900 to-purple-900 text-gray-100 rounded-2xl shadow-2xl border border-purple-500/30 p-0 max-w-2xl">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-emerald-500/10 via-orange-500/10 to-emerald-500/10">
-          <h3 className="flex items-center gap-3 text-xl sm:text-2xl font-extrabold tracking-tight">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10">
-              <AiOutlineSend className="text-2xl text-emerald-400" />
-            </span>
-            <span>
-              Send a Payment{' '}
-              <span className="text-sm font-medium text-gray-400 block sm:inline">
-                (Algorand TestNet • Demo)
-              </span>
-            </span>
-          </h3>
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <RiExchangeDollarLine className="text-2xl text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white">ROSCA Transactions</h3>
+                <p className="text-purple-100 text-sm">Send payments or join groups</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setModalState(false)}
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition"
+            >
+              <AiOutlineClose className="text-xl text-white" />
+            </button>
+          </div>
         </div>
 
-        {/* Body */}
-        <div className="px-6 pt-6 pb-2 space-y-5">
-          {/* Success Banner */}
-          {lastSuccess && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
-              <p className="text-sm text-emerald-300 font-medium">
-                {lastSuccess.msg}{' '}
-                {lastSuccess.txId && (
-                  <a
-                    href={`${LORA}/transaction/${lastSuccess.txId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline decoration-emerald-400/60 hover:decoration-emerald-300 ml-1"
+        <div className="p-6 space-y-6">
+          {/* Transaction Type Selector */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-300 mb-3">Transaction Type</label>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  transactionType === 'standard'
+                    ? 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                    : 'bg-white/5 border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                }`}
+                onClick={() => setTransactionType('standard')}
+              >
+                <AiOutlineSend className="text-2xl mx-auto mb-2" />
+                <div className="text-xs font-semibold">Standard</div>
+              </button>
+              <button
+                type="button"
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  transactionType === 'join-group'
+                    ? 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                    : 'bg-white/5 border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                }`}
+                onClick={() => setTransactionType('join-group')}
+              >
+                <HiUserGroup className="text-2xl mx-auto mb-2" />
+                <div className="text-xs font-semibold">Join Group</div>
+              </button>
+              <button
+                type="button"
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  transactionType === 'rosca-contribution'
+                    ? 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                    : 'bg-white/5 border-purple-500/20 text-gray-400 hover:border-purple-500/40'
+                }`}
+                onClick={() => setTransactionType('rosca-contribution')}
+              >
+                <BsCurrencyDollar className="text-2xl mx-auto mb-2" />
+                <div className="text-xs font-semibold">Contribute</div>
+              </button>
+            </div>
+          </div>
+
+          {/* ROSCA Group Selection (for group transactions) */}
+          {(transactionType === 'join-group' || transactionType === 'rosca-contribution') && (
+            <div className="bg-white/5 backdrop-blur-sm border border-purple-500/20 rounded-xl p-4">
+              <label className="block text-sm font-semibold text-gray-300 mb-3">Select ROSCA Group</label>
+              <div className="space-y-2">
+                {roscaGroups.map((group) => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedGroup === group.id
+                        ? 'bg-purple-600/20 border-purple-500 shadow-lg shadow-purple-500/20'
+                        : 'bg-white/5 border-purple-500/10 hover:border-purple-500/30'
+                    }`}
+                    onClick={() => setSelectedGroup(group.id)}
                   >
-                    View on Lora ↗
-                  </a>
-                )}
-              </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-white">{group.name}</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {transactionType === 'join-group'
+                            ? `Join Fee: ${group.joinFee} ALGO`
+                            : `Contribution: ${group.contribution} ALGO/month`}
+                        </div>
+                      </div>
+                      <BsPeople className="text-2xl text-purple-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Asset Toggle */}
+          {/* Standard Payment Fields */}
+          {transactionType === 'standard' && (
+            <>
+              {/* Receiver Address */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Receiver's Address</label>
+                <input
+                  type="text"
+                  data-test-id="receiver-address"
+                  className="w-full px-4 py-3 bg-white/5 border border-purple-500/20 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 transition font-mono text-sm"
+                  placeholder="e.g., KPLX..."
+                  value={receiverAddress}
+                  onChange={(e) => setReceiverAddress(e.target.value)}
+                />
+                <div className="flex justify-between items-center text-xs mt-2">
+                  <span className="text-gray-500">Algorand address (58 characters)</span>
+                  <span
+                    className={`font-mono ${receiverAddress.length === 58 ? 'text-green-400' : 'text-red-400'}`}
+                  >
+                    {receiverAddress.length}/58
+                  </span>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Amount</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.001"
+                    className="w-full px-4 py-3 bg-white/5 border border-purple-500/20 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 transition"
+                    placeholder="1.0"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">{assetType}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Asset Type Toggle */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Asset</label>
-            <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+            <label className="block text-sm font-semibold text-gray-300 mb-3">Asset Type</label>
+            <div className="flex gap-3">
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition
-                  ${assetType === 'ALGO'
-                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-neutral-900'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+                className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                  assetType === 'ALGO'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-purple-500/20'
+                }`}
                 onClick={() => setAssetType('ALGO')}
               >
                 ALGO
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition
-                  ${assetType === 'USDC'
-                    ? 'bg-gradient-to-r from-orange-400 to-orange-500 text-neutral-900'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+                className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                  assetType === 'USDC'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-purple-500/20'
+                }`}
                 onClick={() => setAssetType('USDC')}
               >
                 USDC
@@ -181,81 +374,53 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
             </div>
           </div>
 
-          {/* Amount (fixed to 1 per existing logic) */}
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Amount</label>
-            <div className="relative">
-              <input
-                type="number"
-                value={1}
-                readOnly
-                className="w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-                placeholder="1"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                {assetType}
+          {/* Transaction Summary */}
+          <div className="bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-500/30 rounded-xl p-4">
+            <div className="text-sm font-semibold text-purple-300 mb-2">Transaction Summary</div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Amount to send:</span>
+              <span className="text-xl font-bold text-white">
+                {getTransactionAmount()} {assetType}
               </span>
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Demo is fixed to <span className="text-gray-300 font-medium">1 {assetType}</span> to match current logic.
-            </p>
-          </div>
-
-          {/* Receiver Address */}
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2">Recipient Address</label>
-            <input
-              type="text"
-              data-test-id="receiver-address"
-              className="w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-2.5 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-              placeholder="e.g., KPLX… (Algorand address)"
-              value={receiverAddress}
-              onChange={(e) => setReceiverAddress(e.target.value)}
-            />
-            <div className="flex justify-between items-center text-xs mt-2">
-              <span className="text-gray-500">You will send: 1 {assetType}</span>
-              <span
-                className={`font-mono ${
-                  receiverAddress.length === 58 ? 'text-emerald-400' : 'text-orange-400'
-                }`}
-              >
-                {receiverAddress.length}/58
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer actions */}
-        <div className="px-6 pb-6 pt-2 modal-action flex flex-col-reverse sm:flex-row-reverse gap-3">
-          <button
-            data-test-id="send"
-            type="button"
-            className={`
-              w-full sm:w-auto rounded-xl px-5 py-2.5 font-semibold transition
-              bg-gradient-to-r from-emerald-500 to-green-500 text-neutral-900 hover:from-emerald-400 hover:to-green-400
-              border border-emerald-500/30 shadow-lg shadow-emerald-500/10
-              ${receiverAddress.length === 58 ? '' : 'opacity-50 cursor-not-allowed'}
-            `}
-            onClick={handleSubmit}
-            disabled={loading || receiverAddress.length !== 58}
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <AiOutlineLoading3Quarters className="animate-spin" />
-                Sending…
-              </span>
-            ) : (
-              `Send 1 ${assetType}`
+            {transactionType !== 'standard' && (
+              <div className="text-xs text-gray-400 mt-2">
+                {transactionType === 'join-group' && '🎉 One-time group joining fee'}
+                {transactionType === 'rosca-contribution' && '💰 Monthly ROSCA contribution'}
+              </div>
             )}
-          </button>
+          </div>
 
-          <button
-            type="button"
-            className="w-full sm:w-auto rounded-xl px-5 py-2.5 font-semibold bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
-            onClick={() => setModalState(false)}
-          >
-            Close
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              className="flex-1 px-6 py-3 bg-white/5 hover:bg-white/10 border border-purple-500/20 text-gray-300 rounded-xl font-semibold transition"
+              onClick={() => setModalState(false)}
+            >
+              Cancel
+            </button>
+            <button
+              data-test-id="send"
+              type="button"
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${
+                isFormValid() && !loading
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+                  : 'bg-gray-600/20 text-gray-500 cursor-not-allowed'
+              }`}
+              onClick={handleSubmit}
+              disabled={loading || !isFormValid()}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <AiOutlineLoading3Quarters className="animate-spin" />
+                  Sending...
+                </span>
+              ) : (
+                `Send ${getTransactionAmount()} ${assetType}`
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </dialog>

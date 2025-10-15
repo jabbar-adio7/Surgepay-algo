@@ -1,11 +1,13 @@
 // Home.tsx
-// Modernized landing UI with SurgePay theming.
-// NOTE: All logic for wallet connection, navigation, and button states is unchanged.
+// SurgePay - Modern Fintech Landing UI with ROSCA Groups
+// This file only handles layout and modals — safe place to customize design.
 
 import React, { useState } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
-import { AiOutlineWallet, AiOutlineSend, AiOutlineStar, AiOutlineDeploymentUnit } from 'react-icons/ai'
-import { BsArrowUpRightCircle, BsWallet2 } from 'react-icons/bs'
+import { AiOutlineSend, AiOutlineStar, AiOutlineDeploymentUnit, AiOutlineUserAdd } from 'react-icons/ai'
+import { BsArrowUpRightCircle, BsWallet2, BsPeople, BsCurrencyDollar, BsShield } from 'react-icons/bs'
+import { HiUserGroup } from 'react-icons/hi'
+import { RiExchangeDollarLine } from 'react-icons/ri'
 
 // Frontend modals
 import ConnectWallet from './components/ConnectWallet'
@@ -18,6 +20,40 @@ import AppCalls from './components/AppCalls'
 
 interface HomeProps {}
 
+// Mock ROSCA groups data for POC
+const roscaGroups = [
+  {
+    id: 1,
+    name: 'Entrepreneur Circle',
+    members: 12,
+    maxMembers: 15,
+    contribution: 50,
+    totalPool: 600,
+    nextPayout: '3 days',
+    status: 'active',
+  },
+  {
+    id: 2,
+    name: 'Tech Builders Fund',
+    members: 8,
+    maxMembers: 10,
+    contribution: 100,
+    totalPool: 800,
+    nextPayout: '1 week',
+    status: 'active',
+  },
+  {
+    id: 3,
+    name: 'Community Savings',
+    members: 20,
+    maxMembers: 20,
+    contribution: 25,
+    totalPool: 500,
+    nextPayout: '5 days',
+    status: 'full',
+  },
+]
+
 const Home: React.FC<HomeProps> = () => {
   const [openWalletModal, setOpenWalletModal] = useState<boolean>(false)
   const [openPaymentModal, setOpenPaymentModal] = useState<boolean>(false)
@@ -28,257 +64,248 @@ const Home: React.FC<HomeProps> = () => {
   const { activeAddress } = useWallet()
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-gray-100 flex flex-col relative overflow-hidden">
-      {/* Background accents */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-32 -right-24 h-72 w-72 rounded-full blur-3xl opacity-30 bg-gradient-to-br from-cyan-500 via-teal-500 to-emerald-500" />
-        <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full blur-3xl opacity-20 bg-gradient-to-tr from-fuchsia-500 via-indigo-500 to-cyan-500" />
-      </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-gray-100">
       {/* ---------------- Navbar ---------------- */}
-      <nav className="w-full backdrop-blur supports-[backdrop-filter]:bg-neutral-900/50 bg-neutral-900/70 border-b border-white/10 px-4 sm:px-6 py-4">
-        <div className="mx-auto max-w-7xl flex items-center justify-between">
+      <nav className="w-full bg-black/30 backdrop-blur-md border-b border-purple-500/20 px-6 py-4 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-cyan-400 to-emerald-500 shadow-lg shadow-cyan-500/20" />
-            <h1 className="text-lg sm:text-xl font-extrabold tracking-tight">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400">
-                SurgePay
-              </span>{' '}
-              <span className="text-gray-400 font-semibold">Algorand Gateway</span>
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+              <BsCurrencyDollar className="text-2xl text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400">
+              SurgePay
             </h1>
+            <span className="text-xs px-2 py-1 bg-purple-500/20 rounded-full text-purple-300 border border-purple-500/30">
+              ROSCA POC
+            </span>
           </div>
-
-          <div className="hidden md:flex items-center gap-6">
-            <a href="/#features" className="text-sm text-gray-300 hover:text-white transition">
-              Features
-            </a>
-            <a href="/docs" className="text-sm text-gray-300 hover:text-white transition">
-              Docs
-            </a>
-            <a
-              href="/signin"
-              className="text-sm px-3 py-2 rounded-lg border border-white/10 hover:border-white/20 text-gray-200 hover:text-white transition"
-            >
-              Sign in
-            </a>
-            <a
-              href="/signup"
-              className="text-sm px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-neutral-900 font-semibold transition"
-            >
-              Sign up
-            </a>
-          </div>
-
-          {/* Wallet button (unchanged logic) */}
           <button
-            className="ml-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-white/10 text-sm font-semibold text-gray-100 transition md:ml-6"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-sm font-semibold text-white transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
             onClick={() => setOpenWalletModal(true)}
-            aria-label={activeAddress ? 'Wallet Connected' : 'Connect Wallet'}
           >
-            <BsWallet2 className="text-lg text-cyan-400" />
-            <span>{activeAddress ? 'Wallet Connected' : 'Connect Wallet'}</span>
+            <BsWallet2 className="text-lg" />
+            <span>{activeAddress ? 'Connected' : 'Connect Wallet'}</span>
           </button>
-        </div>
-
-        {/* Mobile auth links */}
-        <div className="mt-3 flex md:hidden items-center justify-end gap-3 px-2">
-          <a
-            href="/signin"
-            className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 text-gray-200 hover:text-white transition"
-          >
-            Sign in
-          </a>
-          <a
-            href="/signup"
-            className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-neutral-900 font-semibold transition"
-          >
-            Sign up
-          </a>
         </div>
       </nav>
 
       {/* ---------------- Hero Section ---------------- */}
-      <header className="relative">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="py-12 sm:py-16 lg:py-20 grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Copy */}
-            <div className="text-center lg:text-left">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-cyan-300">
-                <AiOutlineWallet className="text-base" />
-                Algorand TestNet Ready
-              </span>
-              <h2 className="mt-4 text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight">
-                Build borderless money
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400">
-                  with SurgePay × Algorand
-                </span>
-              </h2>
-              <p className="mt-4 sm:mt-5 text-base sm:text-lg text-gray-300 max-w-xl mx-auto lg:mx-0">
-                Connect a wallet, send test payments, mint NFTs & ASAs, and trial contract calls — all in one clean,
-                professional interface designed for Web3 finance.
-              </p>
-
-              <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-center lg:justify-start">
-                {/* Primary CTA to the wallet modal (logic unchanged) */}
-                <button
-                  onClick={() => setOpenWalletModal(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-neutral-900 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 transition shadow-lg shadow-cyan-500/20"
-                >
-                  <AiOutlineWallet className="text-lg" />
-                  {activeAddress ? 'View Wallet' : 'Connect Wallet'}
-                </button>
-
-                {/* Secondary CTA anchors for auth (no logic changed) */}
-                <a
-                  href="/signup"
-                  className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-white transition"
-                >
-                  Create account
-                </a>
-                <a
-                  href="/signin"
-                  className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-gray-200 hover:text-white"
-                >
-                  I already have an account
-                </a>
+      <header className="text-center py-16 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
+            <BsShield className="text-purple-400" />
+            <span className="text-sm text-purple-300">Powered by Algorand Blockchain</span>
+          </div>
+          <h2 className="text-5xl sm:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-pink-200 to-purple-200 mb-6 leading-tight">
+            Revolutionizing Group Savings
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">
+              with ROSCA Technology
+            </span>
+          </h2>
+          <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-8">
+            Join decentralized savings groups, contribute regularly, and access rotating credit.
+            Built on Algorand for transparent, secure, and instant transactions.
+          </p>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-12">
+            <div className="bg-white/5 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-4">
+              <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                40+
               </div>
-
-              {/* Trust badges */}
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 justify-center lg:justify-start text-xs text-gray-400">
-                <span className="rounded-md border border-white/10 bg-white/5 px-3 py-1">Non-custodial</span>
-                <span className="rounded-md border border-white/10 bg-white/5 px-3 py-1">Ed25519 wallets</span>
-                <span className="rounded-md border border-white/10 bg-white/5 px-3 py-1">TestNet safe</span>
-              </div>
+              <div className="text-sm text-gray-400 mt-1">Active Groups</div>
             </div>
-
-            {/* Visual / card cluster */}
-            <div className="relative">
-              <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-neutral-900/60 to-neutral-900/30 p-1 backdrop-blur-xl shadow-2xl shadow-cyan-500/10">
-                <div className="rounded-3xl bg-neutral-900/60 p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <AiOutlineSend className="text-3xl mb-3 text-emerald-400" />
-                      <p className="text-sm font-semibold">Instant Payments</p>
-                      <p className="text-xs text-gray-400 mt-1">Try 1 ALGO to any address.</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <AiOutlineStar className="text-3xl mb-3 text-fuchsia-400" />
-                      <p className="text-sm font-semibold">Mint NFTs</p>
-                      <p className="text-xs text-gray-400 mt-1">IPFS + Pinata metadata.</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <BsArrowUpRightCircle className="text-3xl mb-3 text-purple-400" />
-                      <p className="text-sm font-semibold">Create ASAs</p>
-                      <p className="text-xs text-gray-400 mt-1">Spin up test tokens fast.</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                      <AiOutlineDeploymentUnit className="text-3xl mb-3 text-amber-400" />
-                      <p className="text-sm font-semibold">Contract Calls</p>
-                      <p className="text-xs text-gray-400 mt-1">Stateful dApp demo.</p>
-                    </div>
-                  </div>
-                </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-4">
+              <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                $50K+
               </div>
-              {/* Glow */}
-              <div className="absolute -inset-6 -z-10 blur-2xl opacity-20 bg-gradient-to-tr from-cyan-500 via-teal-500 to-emerald-500 rounded-[3rem]" />
+              <div className="text-sm text-gray-400 mt-1">Total Pool</div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-4">
+              <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                500+
+              </div>
+              <div className="text-sm text-gray-400 mt-1">Members</div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ---------------- Features Grid ---------------- */}
-      <main id="features" className="flex-1 px-4 sm:px-6 pb-16">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold tracking-tight">Developer Playground</h3>
-            <p className="text-sm text-gray-400">
-              {activeAddress ? 'Wallet connected — explore features below.' : 'Connect your wallet to unlock features.'}
-            </p>
-          </div>
-
-          {activeAddress ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Send Payment */}
-              <div className="group p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition">
-                <AiOutlineSend className="text-4xl mb-3 text-emerald-400" />
-                <h4 className="text-lg font-semibold mb-2">Send Payment</h4>
-                <p className="text-sm text-gray-400 mb-4">
-                  Try sending 1 ALGO to any address on TestNet. This helps you understand wallet transactions.
-                </p>
-                <button
-                  className="w-full py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-neutral-900 font-semibold transition"
-                  onClick={() => setOpenPaymentModal(true)}
-                >
-                  Open
-                </button>
+      {/* ---------------- ROSCA Groups Section ---------------- */}
+      {activeAddress && (
+        <section className="px-6 pb-12">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <HiUserGroup className="text-purple-400" />
+                  Available ROSCA Groups
+                </h3>
+                <p className="text-gray-400 text-sm mt-1">Join a group and start saving together</p>
               </div>
-
-              {/* Mint NFT */}
-              <div className="group p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition">
-                <AiOutlineStar className="text-4xl mb-3 text-fuchsia-400" />
-                <h4 className="text-lg font-semibold mb-2">Mint NFT</h4>
-                <p className="text-sm text-gray-400 mb-4">
-                  Upload an image and mint it as an NFT on Algorand with IPFS metadata stored via Pinata.
-                </p>
-                <button
-                  className="w-full py-2 rounded-lg bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-semibold transition"
-                  onClick={() => setOpenMintModal(true)}
-                >
-                  Open
-                </button>
-              </div>
-
-              {/* Create Token */}
-              <div className="group p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition">
-                <BsArrowUpRightCircle className="text-4xl mb-3 text-purple-400" />
-                <h4 className="text-lg font-semibold mb-2">Create Token (ASA)</h4>
-                <p className="text-sm text-gray-400 mb-4">
-                  Spin up your own Algorand Standard Asset (ASA) in seconds. Perfect for testing token creation.
-                </p>
-                <button
-                  className="w-full py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold transition"
-                  onClick={() => setOpenTokenModal(true)}
-                >
-                  Open
-                </button>
-              </div>
-
-              {/* Contract Interactions */}
-              <div className="group p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition">
-                <AiOutlineDeploymentUnit className="text-4xl mb-3 text-amber-400" />
-                <h4 className="text-lg font-semibold mb-2">Contract Interactions</h4>
-                <p className="text-sm text-gray-400 mb-4">
-                  Interact with a simple Algorand smart contract to see how stateful dApps work on chain.
-                </p>
-                <button
-                  className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-neutral-900 font-semibold transition"
-                  onClick={() => setOpenAppCallsModal(true)}
-                >
-                  Open
-                </button>
-              </div>
+              <button className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-lg text-purple-300 text-sm font-semibold transition">
+                View All Groups
+              </button>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {roscaGroups.map((group) => (
+                <div
+                  key={group.id}
+                  className="bg-white/5 backdrop-blur-md border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/40 transition-all hover:shadow-xl hover:shadow-purple-500/10"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-white mb-1">{group.name}</h4>
+                      <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <BsPeople />
+                        <span>{group.members}/{group.maxMembers} members</span>
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        group.status === 'active'
+                          ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                          : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                      }`}
+                    >
+                      {group.status === 'active' ? 'Open' : 'Full'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">Monthly Contribution</span>
+                      <span className="text-white font-semibold">{group.contribution} ALGO</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">Total Pool</span>
+                      <span className="text-purple-300 font-semibold">{group.totalPool} ALGO</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">Next Payout</span>
+                      <span className="text-pink-300 font-semibold">{group.nextPayout}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    className={`w-full py-2.5 rounded-xl font-semibold transition-all ${
+                      group.status === 'active'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/25'
+                        : 'bg-gray-600/20 text-gray-500 cursor-not-allowed'
+                    }`}
+                    disabled={group.status !== 'active'}
+                    onClick={() => setOpenPaymentModal(true)}
+                  >
+                    {group.status === 'active' ? 'Join Group' : 'Group Full'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------------- Features Grid ---------------- */}
+      <main className="px-6 pb-12">
+        <div className="max-w-7xl mx-auto">
+          {activeAddress ? (
+            <>
+              <h3 className="text-2xl font-bold text-white mb-6">Platform Features</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* ROSCA Transactions */}
+                <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-purple-500/20 hover:border-purple-500/40 transition-all hover:shadow-xl hover:shadow-purple-500/10">
+                  <RiExchangeDollarLine className="text-4xl mb-3 text-purple-400" />
+                  <h3 className="text-lg font-semibold mb-2 text-white">ROSCA Payments</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Send payments, join groups, and manage your ROSCA contributions seamlessly.
+                  </p>
+                  <button
+                    className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold transition-all shadow-lg shadow-purple-500/25"
+                    onClick={() => setOpenPaymentModal(true)}
+                  >
+                    Open
+                  </button>
+                </div>
+
+                {/* Mint NFT */}
+                <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-pink-500/20 hover:border-pink-500/40 transition-all hover:shadow-xl hover:shadow-pink-500/10">
+                  <AiOutlineStar className="text-4xl mb-3 text-pink-400" />
+                  <h3 className="text-lg font-semibold mb-2 text-white">Mint NFT</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Create membership NFTs for your ROSCA groups with IPFS metadata.
+                  </p>
+                  <button
+                    className="w-full py-2 rounded-lg bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-lg shadow-pink-500/25"
+                    onClick={() => setOpenMintModal(true)}
+                  >
+                    Open
+                  </button>
+                </div>
+
+                {/* Create Token */}
+                <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all hover:shadow-xl hover:shadow-blue-500/10">
+                  <BsArrowUpRightCircle className="text-4xl mb-3 text-blue-400" />
+                  <h3 className="text-lg font-semibold mb-2 text-white">Create Token</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Launch your own group token (ASA) for ROSCA governance and rewards.
+                  </p>
+                  <button
+                    className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold transition-all shadow-lg shadow-blue-500/25"
+                    onClick={() => setOpenTokenModal(true)}
+                  >
+                    Open
+                  </button>
+                </div>
+
+                {/* Smart Contracts */}
+                <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-amber-500/20 hover:border-amber-500/40 transition-all hover:shadow-xl hover:shadow-amber-500/10">
+                  <AiOutlineDeploymentUnit className="text-4xl mb-3 text-amber-400" />
+                  <h3 className="text-lg font-semibold mb-2 text-white">Smart Contracts</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Interact with ROSCA smart contracts for automated group management.
+                  </p>
+                  <button
+                    className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold transition-all shadow-lg shadow-amber-500/25"
+                    onClick={() => setOpenAppCallsModal(true)}
+                  >
+                    Open
+                  </button>
+                </div>
+              </div>
+            </>
           ) : (
-            <div className="text-center text-gray-400 mt-12">
-              <p className="text-sm">⚡ Connect your wallet first to unlock the features below.</p>
+            <div className="text-center py-20">
+              <div className="max-w-md mx-auto">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <BsWallet2 className="text-4xl text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Connect Your Wallet</h3>
+                <p className="text-gray-400 mb-6">
+                  Get started with SurgePay ROSCA by connecting your Algorand wallet
+                </p>
+                <button
+                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                  onClick={() => setOpenWalletModal(true)}
+                >
+                  Connect Wallet to Continue
+                </button>
+              </div>
             </div>
           )}
         </div>
       </main>
 
       {/* ---------------- Footer ---------------- */}
-      <footer className="border-t border-white/10 bg-neutral-950/60">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-400">© {new Date().getFullYear()} SurgePay. All rights reserved.</p>
-          <div className="flex items-center gap-4 text-xs">
-            <a href="/terms" className="text-gray-400 hover:text-white transition">Terms</a>
-            <a href="/privacy" className="text-gray-400 hover:text-white transition">Privacy</a>
-            <a href="/status" className="text-gray-400 hover:text-white transition">Status</a>
-          </div>
+      <footer className="border-t border-purple-500/20 py-8 px-6 bg-black/20 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto text-center text-gray-400 text-sm">
+          <p>SurgePay ROSCA - Proof of Concept on Algorand TestNet</p>
+          <p className="mt-2 text-xs text-gray-500">Democratizing savings through blockchain technology</p>
         </div>
       </footer>
 
-      {/* ---------------- Modals (unchanged) ---------------- */}
+      {/* ---------------- Modals ---------------- */}
       <ConnectWallet openModal={openWalletModal} closeModal={() => setOpenWalletModal(false)} />
       <Transact openModal={openPaymentModal} setModalState={setOpenPaymentModal} />
       <NFTmint openModal={openMintModal} setModalState={setOpenMintModal} />
